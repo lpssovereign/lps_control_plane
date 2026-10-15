@@ -20,6 +20,8 @@ from .policy_engine import (
 )
 from .executor import ExecutionEngine
 from .audit_log import AuditLog, AuditEntry
+from .delegation import StandingDelegation, StandingDelegationPolicy, default_lps_standing_delegation
+from .tesseract import TesseractExecutionEngine
 
 __version__ = "0.1.0"
 
@@ -39,4 +41,8 @@ __all__ = [
     "ExecutionEngine",
     "AuditLog",
     "AuditEntry",
+    "StandingDelegation",
+    "StandingDelegationPolicy",
+    "default_lps_standing_delegation",
+    "TesseractExecutionEngine",
 ]
