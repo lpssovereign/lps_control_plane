@@ -51,7 +51,7 @@ Approval receipt must state whether approval came from explicit seal, standing d
 ## Tesseract state objects
 
 The control plane should be capable of carrying:
-Entity, Observation, Source, Claim, State, Context, Discrepancy, Hypothesis, Confidence, Unknown, Intervention/Action, Prediction, Outcome, Revision.
+Entity, Observation, Source, Claim, State, Context, Discrepancy, Hypothesis, Confidence, Unknown, Intervention; Action, Prediction, Outcome, Revision.
 
 Do not force all of these into Action itself; preserve typed objects/events.
 
