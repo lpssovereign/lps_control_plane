@@ -1,0 +1,28 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environments and packaging
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Generated benchmark and stress-test output
+stress_test_output.txt
+stress_results.log
+*.benchmark.json
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
