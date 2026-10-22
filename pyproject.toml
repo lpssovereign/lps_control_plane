@@ -1,27 +1,26 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-control-plane"
 version = "0.1.0"
-description = "Constraint-based runtime for safe AI agent execution"
+description = "Reference runtime for governed AI-agent execution"
 readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "MIT"}
-keywords = ["ai", "agent", "control", "state-machine", "policy", "audit"]
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+keywords = ["ai", "agent", "governance", "state-machine", "policy", "audit"]
 authors = [
-  {name = "[Author Name]", email = "[author@example.com]"}
+  {name = "Lalo Pacheco Sánchez"}
 ]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -37,9 +36,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/[username]/ai-control-plane"
-Repository = "https://github.com/[username]/ai-control-plane"
-Issues = "https://github.com/[username]/ai-control-plane/issues"
+Homepage = "https://github.com/lpssovereign/lps_control_plane"
+Repository = "https://github.com/lpssovereign/lps_control_plane"
+Issues = "https://github.com/lpssovereign/lps_control_plane/issues"
 
 [tool.setuptools.packages.find]
 include = ["control_plane*"]
@@ -49,12 +48,17 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 addopts = "-v --strict-markers"
+markers = [
+  "stress: resource-intensive stress and load tests",
+]
 
 [tool.black]
 line-length = 88
-target-version = ['py38', 'py39', 'py310', 'py311']
+target-version = ["py310", "py311", "py312"]
 
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = []
