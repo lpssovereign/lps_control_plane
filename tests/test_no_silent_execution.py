@@ -1,53 +1,62 @@
 """
 Tests ensuring no silent execution.
 
-Critical safety property: Actions must pass through full pipeline.
-No shortcuts, no silent execution.
+Critical safety property: actions must pass through the governed pipeline.
 """
 
 import pytest
-from control_plane import ExecutionEngine, Action, PolicyVerdict, RiskBasedPolicy
+
+from control_plane import (
+    Action,
+    ExecutionEngine,
+    ExecutionState,
+    PolicyVerdict,
+    RiskBasedPolicy,
+)
 
 
 def test_execution_requires_approval_path():
-    """Test that high-risk actions cannot execute without approval."""
+    """High-risk actions fail closed when no approval mechanism is provided."""
     engine = ExecutionEngine()
-
-    # Register policy
     engine.policy_engine.register_rule(RiskBasedPolicy(approval_threshold=7))
 
-    # Register dummy executor
-    engine.register_executor("risky_action", lambda params: "executed")
+    executed = {"called": False}
 
-    # High-risk action without approval mechanism should fail
+    def executor(params):
+        executed["called"] = True
+        return "executed"
+
+    engine.register_executor("risky_action", executor)
     high_risk = Action(action_type="risky_action", risk_level=8)
 
-    with pytest.raises(RuntimeError, match="requires approval"):
-        engine.execute(high_risk, auto_approve=False, approval_callback=None)
+    result = engine.execute(
+        high_risk,
+        auto_approve=False,
+        approval_callback=None,
+    )
+
+    assert not result.success
+    assert "requires approval" in result.error.lower()
+    assert not executed["called"]
 
 
 def test_all_executions_logged():
-    """Test that all executions are logged to audit trail."""
+    """All executions are represented in the audit trail."""
     engine = ExecutionEngine()
-
     engine.register_executor("test_action", lambda params: "result")
 
     action = Action(action_type="test_action", risk_level=3)
     result = engine.execute(action, auto_approve=True)
 
-    # Check audit trail exists
-    audit_trail = engine.get_audit_trail()
-    assert len(audit_trail) > 0
-
-    # Check audit log
+    assert result.success
+    assert len(engine.get_audit_trail()) > 0
     assert len(engine.audit_log) > 0
 
 
 def test_denied_actions_do_not_execute():
-    """Test that denied actions never reach execution."""
+    """Denied actions never reach the executor."""
     engine = ExecutionEngine()
 
-    # Policy that denies everything
     class DenyAllPolicy:
         rule_type = "deny_all"
         scope = "global"
@@ -59,8 +68,6 @@ def test_denied_actions_do_not_execute():
             return PolicyVerdict.DENY
 
     engine.policy_engine.register_rule(DenyAllPolicy())
-
-    # Track if executor was called
     executed = {"called": False}
 
     def executor(params):
@@ -68,26 +75,17 @@ def test_denied_actions_do_not_execute():
         return "should_not_happen"
 
     engine.register_executor("test", executor)
+    result = engine.execute(Action(action_type="test", risk_level=5))
 
-    # Execute denied action
-    action = Action(action_type="test", risk_level=5)
-    result = engine.execute(action)
-
-    # Should not succeed
     assert not result.success
     assert "denied" in result.error.lower()
-
-    # Executor should never be called
     assert not executed["called"]
 
 
 def test_approval_denial_prevents_execution():
-    """Test that denied approvals prevent execution."""
+    """A rejected approval prevents executor invocation."""
     engine = ExecutionEngine()
-
     engine.policy_engine.register_rule(RiskBasedPolicy(approval_threshold=5))
-
-    # Track execution
     executed = {"called": False}
 
     def executor(params):
@@ -95,83 +93,55 @@ def test_approval_denial_prevents_execution():
         return "result"
 
     engine.register_executor("test", executor)
-
-    # Approval callback that denies
-    def deny_approval(action):
-        return False
-
     action = Action(action_type="test", risk_level=7)
-    result = engine.execute(action, approval_callback=deny_approval)
+    result = engine.execute(action, approval_callback=lambda _: False)
 
-    # Should not succeed
     assert not result.success
     assert "denied" in result.error.lower()
-
-    # Executor should not be called
     assert not executed["called"]
 
 
 def test_state_machine_enforces_ordering():
-    """Test that state machine enforces correct ordering."""
+    """The state machine rejects attempts to skip required states."""
     engine = ExecutionEngine()
-
-    # Try to manually manipulate state (should fail)
     engine.state_machine.initialize()
 
-    # Cannot skip states
     with pytest.raises(ValueError):
-        engine.state_machine.transition(
-            engine.state_machine.ExecutionState.EXECUTE  # Skip PLAN and APPROVE
-        )
+        engine.state_machine.transition(ExecutionState.EXECUTE)
 
 
 def test_audit_trail_integrity():
-    """Test audit trail hash chain integrity."""
+    """The audit-log hash chain remains valid across executions."""
     engine = ExecutionEngine()
-
     engine.register_executor("test", lambda params: "result")
 
-    # Execute several actions
     for i in range(5):
         action = Action(action_type="test", params={"i": i}, risk_level=3)
         engine.execute(action, auto_approve=True)
-
-        # Reset state machine for next execution
         engine.state_machine = type(engine.state_machine)()
 
-    # Verify audit log integrity
     assert engine.audit_log.verify_integrity()
 
 
 def test_immutable_audit_records():
-    """Test that audit records cannot be modified."""
+    """Audit entries cannot be modified."""
     engine = ExecutionEngine()
-
     engine.register_executor("test", lambda params: "result")
 
-    action = Action(action_type="test", risk_level=3)
-    engine.execute(action, auto_approve=True)
-
-    # Get audit entries
+    engine.execute(Action(action_type="test", risk_level=3), auto_approve=True)
     entries = engine.audit_log.get_entries()
-    assert len(entries) > 0
 
-    # Try to modify (should fail)
-    with pytest.raises(Exception):  # FrozenInstanceError
+    assert entries
+    with pytest.raises(Exception):
         entries[0].message = "tampered"
 
 
 def test_execution_statistics_tracking():
-    """Test that execution statistics are tracked."""
+    """Execution statistics report state, policy, and audit activity."""
     engine = ExecutionEngine()
-
     engine.register_executor("test", lambda params: "result")
 
-    # Execute action
-    action = Action(action_type="test", risk_level=3)
-    result = engine.execute(action, auto_approve=True)
-
-    # Get statistics
+    engine.execute(Action(action_type="test", risk_level=3), auto_approve=True)
     stats = engine.get_statistics()
 
     assert "state_machine" in stats
